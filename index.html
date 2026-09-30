@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IMC TAREAS - Instituto Magdalena de Canossa</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{crema:'#F5F1E8', marron:'#3C2415', dorado:'#C5A46E', doradoH:'#B8925A', beige:'#E8DDC8'}, fontFamily:{serif:['Instrument Serif','serif'], sans:['Inter','sans-serif']}}}}
+</script>
+<style>body{background:#F5F1E8;color:#3C2415;font-family:Inter}.card{background:white;border-radius:16px;box-shadow:0 1px 3px rgba(60,36,21,.08);border:1px solid #E8DDC8}</style>
+</head>
+<body class="min-h-screen">
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-[420px] card p-8">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 mx-auto bg-marron rounded-2xl flex items-center justify-center text-white font-serif text-3xl mb-4">IMC</div>
+      <h1 class="font-serif text-3xl">IMC TAREAS</h1>
+      <p class="text-sm opacity-60 mt-1">Instituto Magdalena de Canossa</p>
+    </div>
+    <div class="flex bg-crema rounded-full p-1 mb-6"><button id="tabLogin" class="flex-1 py-2 rounded-full bg-marron text-white text-sm font-medium">Ingresar</button><button id="tabReg" class="flex-1 py-2 rounded-full text-sm">Registrarme</button></div>
+    <form id="loginForm" class="space-y-4">
+      <input id="loginCurso" placeholder="Curso / División (ej: 5to B)" class="w-full px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none focus:border-dorado">
+      <input id="loginPass" type="password" placeholder="Contraseña" class="w-full px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none focus:border-dorado">
+      <button class="w-full bg-marron text-white py-3 rounded-xl font-medium hover:bg-black transition">Entrar</button>
+    </form>
+    <form id="regForm" class="space-y-3 hidden">
+      <div class="grid grid-cols-2 gap-3"><input id="regNombre" placeholder="Nombre" required class="px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none"><input id="regApellido" placeholder="Apellido" required class="px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none"></div>
+      <input id="regCurso" placeholder="Curso / División" required class="w-full px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none">
+      <input id="regPass" type="password" placeholder="Contraseña" required class="w-full px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none">
+      <input id="regPass2" type="password" placeholder="Confirmar contraseña" required class="w-full px-4 py-3 rounded-xl border border-beige bg-crema/50 outline-none">
+      <button class="w-full bg-dorado text-marron py-3 rounded-xl font-semibold hover:bg-doradoH transition">Crear cuenta</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <!-- SIDEBAR DESKTOP -->
+  <aside class="hidden md:flex fixed left-0 top-0 h-screen w-[260px] bg-white border-r border-beige flex-col p-5">
+    <div class="flex items-center gap-3 mb-8"><div class="w-10 h-10 bg-marron rounded-xl flex items-center justify-center text-white font-serif">IMC</div><div><p class="font-serif font-bold leading-none">IMC TAREAS</p><p class="text-[11px] opacity-60">Magdalena de Canossa</p></div></div>
+    <nav id="sideNav" class="space-y-1 flex-1"></nav>
+    <div class="card p-3 flex items-center gap-3"><div class="w-8 h-8 bg-dorado rounded-full flex items-center justify-center text-sm font-bold" id="avatar">M</div><div class="flex-1 min-w-0"><p id="userNameSide" class="text-sm font-medium truncate"></p><p id="userCursoSide" class="text-xs opacity-60"></p></div><button onclick="logout()" class="text-xs opacity-50">Salir</button></div>
+  </aside>
+
+  <main class="md:ml-[260px] pb-[90px] md:pb-0 min-h-screen">
+    <header class="sticky top-0 z-20 bg-crema/80 backdrop-blur border-b border-beige md:border-none px-4 md:px-8 py-4 flex justify-between items-center">
+      <h2 id="pageTitle" class="font-serif text-2xl">Inicio</h2><div class="flex gap-2"><button onclick="openModal('tarea')" class="bg-marron text-white px-4 py-2 rounded-full text-sm">+ Tarea</button></div>
+    </header>
+    <div id="content" class="p-4 md:p-8"></div>
+  </main>
+
+  <!-- BOTTOM NAV MOBILE -->
+  <nav id="bottomNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-beige flex justify-around py-2 px-2 z-30"></nav>
+</div>
+
+<!-- MODALS -->
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-auto" id="modalBody"></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+let currentUser=JSON.parse(localStorage.getItem('imc_currentUser')||'null');
+let view='inicio';
+const materiasDefault=["Matemática","Lengua","Historia","Química","Física","Inglés","Biología"];
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))} function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}}
+function init(){
+ if(currentUser){$('#authScreen').classList.add('hidden');$('#app').classList.remove('hidden');renderNav();router('inicio')}
+ $('#tabLogin').onclick=()=>{ $('#loginForm').classList.remove('hidden'); $('#regForm').classList.add('hidden'); $('#tabLogin').className='flex-1 py-2 rounded-full bg-marron text-white text-sm font-medium'; $('#tabReg').className='flex-1 py-2 rounded-full text-sm' }
+ $('#tabReg').onclick=()=>{ $('#loginForm').classList.add('hidden'); $('#regForm').classList.remove('hidden'); $('#tabReg').className='flex-1 py-2 rounded-full bg-marron text-white text-sm font-medium'; $('#tabLogin').className='flex-1 py-2 rounded-full text-sm' }
+ $('#loginForm').onsubmit=e=>{e.preventDefault();let curso=$('#loginCurso').value.trim();let pass=$('#loginPass').value;let users=load('imc_users',[]);let u=users.find(x=>x.curso.toLowerCase()==curso.toLowerCase() && x.pass==pass);if(!u){alert('Curso o contraseña incorrectos');return} currentUser=u;save('imc_currentUser',u);location.reload()}
+ $('#regForm').onsubmit=e=>{e.preventDefault();if($('#regPass').value!=$('#regPass2').value){alert('Contraseñas no coinciden');return}let users=load('imc_users',[]);let nu={id:Date.now(),nombre:$('#regNombre').value,apellido:$('#regApellido').value,curso:$('#regCurso').value,pass:$('#regPass').value,privacidad:true,ranking:true,nombreRanking:$('#regNombre').value};users.push(nu);save('imc_users',users);currentUser=nu;save('imc_currentUser',nu);location.reload()}
+}
+function logout(){localStorage.removeItem('imc_currentUser');location.reload()}
+function renderNav(){
+ $('#userNameSide').textContent=currentUser.nombre+' '+currentUser.apellido; $('#userCursoSide').textContent=currentUser.curso; $('#avatar').textContent=currentUser.nombre[0];
+ const items=[['inicio','🏠','Inicio'],['tareas','📝','Tareas'],['calendario','📅','Calendario'],['materias','📚','Materias'],['notas','📊','Mis notas'],['horarios','🕐','Horarios'],['curso','👥','Mi curso'],['ranking','🏆','Ranking'],['objetivos','🎯','Objetivos'],['perdido','🤯','Estoy perdido']];
+ $('#sideNav').innerHTML=items.map(([id,ico,lab])=>`<button onclick="router('${id}')" data-nav="${id}" class="w-full text-left px-3 py-2.5 rounded-xl flex gap-3 items-center text-sm ${view==id?'bg-marron text-white':'hover:bg-crema'}"><span>${ico}</span>${lab}</button>`).join('');
+ $('#bottomNav').innerHTML=[['inicio','🏠'],['tareas','📝'],['calendario','📅'],['materias','📚'],['perfil','👤']].map(([id,ico])=>`<button onclick="router('${id=='perfil'?'objetivos':id}')" class="flex flex-col items-center p-2 ${view==id?'text-marron': 'opacity-60'}"><span class="text-xl">${ico}</span><span class="text-[10px]">${id}</span></button>`).join('');
+}
+function router(v){view=v;renderNav();$('#pageTitle').textContent=v=='inicio'?'Hoy':v.charAt(0).toUpperCase()+v.slice(1);const c=$('#content');if(v=='inicio')c.innerHTML=renderInicio();if(v=='tareas')c.innerHTML=renderTareas();if(v=='materias')c.innerHTML=renderMaterias();if(v=='notas')c.innerHTML=renderNotas();if(v=='calendario')c.innerHTML=renderCalendario();if(v=='horarios')c.innerHTML=renderHorarios();if(v=='curso')c.innerHTML=renderCurso();if(v=='ranking')c.innerHTML=renderRanking();if(v=='objetivos')c.innerHTML=renderObjetivos();if(v=='perdido')c.innerHTML=renderPerdido();window.scrollTo(0,0)}
+
+function tareasUser(){return load('imc_tareas',[]).filter(t=>t.userId==currentUser.id)}
+function notasUser(){return load('imc_notas',[]).filter(n=>n.userId==currentUser.id)}
+function getMaterias(){let m=load('imc_materias',[]).filter(x=>x.userId==currentUser.id);if(!m.length){m=materiasDefault.map(n=>({id:n,userId:currentUser.id,nombre:n,profesor:'',horario:'',promedio:0}));save('imc_materias',[...load('imc_materias',[]),...m])}return m}
+
+function renderInicio(){
+ let t=tareasUser(); let hoy=new Date().toISOString().slice(0,10); let hoyT=t.filter(x=>x.fecha==hoy); let atras=t.filter(x=>x.fecha<hoy && x.estado!='completada'); let prox=notasUser().length?Math.max(...notasUser().map(n=>n.nota)).toFixed(1):'-'; let avg=t.length? (t.filter(x=>x.estado=='completada').length/t.length*100).toFixed(0):0;
+ return `<div class="grid md:grid-cols-3 gap-4">
+  <div class="md:col-span-2 space-y-4">
+   <div class="card p-5"><h3 class="font-semibold mb-3">Hoy - ${new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})}</h3><div class="space-y-2">${hoyT.length?hoyT.map(cardTarea).join(''):'<p class="text-sm opacity-60">No hay tareas para hoy 🎉</p>'}${atras.length?'<div class="mt-4 pt-4 border-t"><p class="text-sm font-medium text-red-600 mb-2">🔴 Atrasadas ('+atras.length+')</p>'+atras.map(cardTarea).join('')+'</div>':''}</div></div>
+   <div class="grid grid-cols-2 gap-4"><div class="card p-4"><p class="text-xs opacity-60">TAREAS PENDIENTES</p><p class="text-2xl font-serif">${t.filter(x=>x.estado!='completada').length}</p></div><div class="card p-4"><p class="text-xs opacity-60">COMPLETADAS</p><p class="text-2xl font-serif">${avg}%</p></div></div>
+  </div>
+  <div class="space-y-4">
+   <div class="card p-5 bg-marron text-white"><p class="text-xs opacity-70">PROMEDIO GENERAL</p><p class="text-4xl font-serif mt-1">${calcPromedioGeneral()}</p><p class="text-xs opacity-60 mt-2">${notasUser().length} evaluaciones</p></div>
+   <div class="card p-5"><h4 class="font-medium mb-3">Acciones rápidas</h4><div class="grid grid-cols-1 gap-2"><button onclick="openModal('tarea')" class="w-full bg-dorado text-marron py-2.5 rounded-xl text-sm font-medium">+ Nueva tarea</button><button onclick="openModal('nota')" class="w-full border border-beige py-2.5 rounded-xl text-sm">+ Nueva nota</button><button onclick="openModal('objetivo')" class="w-full border border-beige py-2.5 rounded-xl text-sm">+ Nuevo objetivo</button></div></div>
+   <div class="card p-5"><h4 class="font-medium mb-2">Próximo examen</h4><p class="text-sm opacity-70">${load('imc_eventos',[]).filter(e=>e.userId==currentUser.id && e.tipo=='examen').sort((a,b)=>a.fecha.localeCompare(b.fecha))[0]?.titulo||'Sin exámenes cargados'}</p></div>
+  </div>
+ </div>`
+}
+function cardTarea(t){const col=t.prioridad=='urgente'?'border-red-500':t.prioridad=='importante'?'border-orange-400':'border-green-500';return `<div class="flex gap-3 p-3 bg-crema/50 rounded-xl border-l-4 ${col}"><input type="checkbox" ${t.estado=='completada'?'checked':''} onchange="toggleTarea(${t.id})" class="mt-1"><div class="flex-1"><p class="text-sm font-medium ${t.estado=='completada'?'line-through opacity-60':''}">${t.titulo}</p><p class="text-xs opacity-60">${t.materia} • ${t.fecha}</p></div><span class="text-[10px] px-2 py-1 rounded-full bg-white border">${t.estado}</span></div>`}
+function calcPromedioGeneral(){let n=notasUser();if(!n.length) return '-';return (n.reduce((a,b)=>a+Number(b.nota),0)/n.length).toFixed(1)}
+function renderTareas(){let t=tareasUser();let filter=load('imc_filtroT','todas');let ft=t.filter(x=>{if(filter=='hoy')return x.fecha==new Date().toISOString().slice(0,10);if(filter=='atrasadas')return x.fecha<new Date().toISOString().slice(0,10)&&x.estado!='completada';if(filter=='completadas')return x.estado=='completada';return true});return `<div class="flex gap-2 overflow-auto pb-2">${['todas','hoy','atrasadas','completadas'].map(f=>`<button onclick="setFiltro('${f}')" class="px-4 py-2 rounded-full text-xs whitespace-nowrap ${filter==f?'bg-marron text-white':'bg-white border'}">${f.toUpperCase()}</button>`).join('')}</div><div class="mt-4 grid gap-3">${ft.map(cardTarea).join('')||'<p class="opacity-60 text-sm">No hay tareas</p>'}<button onclick="openModal('tarea')" class="card p-4 text-sm opacity-60 border-dashed">+ Crear tarea</button></div>`}
+function setFiltro(f){save('imc_filtroT',f);router('tareas')}
+function toggleTarea(id){let all=load('imc_tareas',[]);let it=all.find(x=>x.id==id);if(it){it.estado=it.estado=='completada'?'pendiente':'completada'; if(it.estado=='completada') addXP(10,'tarea'); save('imc_tareas',all); router(view)}}
+
+function renderMaterias(){let ms=getMaterias();return `<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">${ms.map(m=>{let notas=notasUser().filter(n=>n.materia==m.nombre);let prom=notas.length?(notas.reduce((a,b)=>a+Number(b.nota),0)/notas.length).toFixed(1):'-';let pend=tareasUser().filter(t=>t.materia==m.nombre && t.estado!='completada').length;return `<div class="card p-5"><div class="flex justify-between"><h3 class="font-serif text-lg">${m.nombre}</h3><span class="text-xs px-2 py-1 bg-crema rounded-full">${prom}</span></div><p class="text-xs opacity-60 mt-1">Prof: ${m.profesor||'Sin asignar'} • ${pend} pendientes</p><div class="mt-3 space-y-1">${notas.slice(-3).map(n=>`<div class="flex justify-between text-xs"><span>${n.tipo}</span><span class="font-medium">${n.nota}</span></div>`).join('')||'<p class="text-xs opacity-50">Sin notas</p>'}</div><button onclick="openModal('nota','${m.nombre}')" class="mt-4 w-full border border-beige py-2 rounded-xl text-xs">+ Nota</button></div>`}).join('')}</div>`}
+
+function renderNotas(){let n=notasUser();return `<div class="card p-5 mb-4"><div class="flex justify-between"><div><p class="text-xs opacity-60">PROMEDIO GENERAL</p><p class="text-3xl font-serif">${calcPromedioGeneral()}</p></div><button onclick="openModal('nota')" class="bg-marron text-white px-4 py-2 rounded-full text-sm h-fit">+ Nota</button></div><canvas id="chart" class="w-full h-[120px] mt-4"></canvas></div><div class="space-y-2">${n.slice().reverse().map(x=>`<div class="card p-4 flex justify-between"><div><p class="text-sm font-medium">${x.materia} - ${x.tipo}</p><p class="text-xs opacity-60">${x.fecha} ${x.desc||''}</p></div><p class="text-lg font-serif">${x.nota}</p></div>`).join('')||'Sin notas'}</div>`}
+
+function renderCalendario(){let ev=load('imc_eventos',[]).filter(e=>e.userId==currentUser.id);return `<div class="flex justify-between items-center mb-4"><h3 class="font-medium">Calendario escolar</h3><button onclick="openModal('evento')" class="bg-dorado px-4 py-2 rounded-full text-sm">+ Evento</button></div><div class="grid gap-2">${ev.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(e=>{const c={examen:'bg-red-100 text-red-700',entrega:'bg-orange-100 text-orange-700',evento:'bg-blue-100',feriado:'bg-green-100',acto:'bg-purple-100'}[e.tipo]||'bg-crema';return `<div class="card p-3 flex gap-3"><div class="text-xs font-mono">${e.fecha}</div><span class="text-[10px] px-2 py-1 rounded-full ${c}">${e.tipo}</span><p class="text-sm flex-1">${e.titulo}</p></div>`}).join('')||'<p class="text-sm opacity-60">No hay eventos</p>'}</div>`}
+
+function renderHorarios(){let h=load('imc_horarios',[]).filter(x=>x.userId==currentUser.id);const dias=['Lunes','Martes','Miércoles','Jueves','Viernes'];return `<div class="card p-5 overflow-auto"><div class="flex justify-between mb-4"><h3 class="font-medium">Horario semanal</h3><button onclick="openModal('horario')" class="text-xs bg-crema px-3 py-1 rounded-full">+ Agregar</button></div><div class="grid grid-cols-5 gap-2 min-w-[600px]">${dias.map(d=>`<div><p class="text-xs font-bold text-center mb-2">${d}</p><div class="space-y-2">${h.filter(x=>x.dia==d).map(x=>`<div class="bg-dorado/20 p-2 rounded-xl text-xs"><p class="font-medium">${x.materia}</p><p class="opacity-60">${x.hora}</p></div>`).join('')||'<p class="text-[10px] opacity-40 text-center">-</p>'}</div></div>`).join('')}</div></div>`}
+
+function renderCurso(){let alumnos=load('imc_users',[]).filter(u=>u.curso==currentUser.curso);return `<div class="card p-5"><h3 class="font-serif text-xl mb-1">Mi curso: ${currentUser.curso}</h3><p class="text-xs opacity-60 mb-4">${alumnos.length} alumnos • Información académica privada</p><div class="grid md:grid-cols-3 gap-3">${alumnos.map(a=>`<div class="flex gap-3 p-3 bg-crema/50 rounded-xl"><div class="w-8 h-8 bg-marron text-white rounded-full flex items-center justify-center text-xs">${a.nombre[0]}</div><div><p class="text-sm font-medium">${a.nombre} ${a.apellido}</p><p class="text-xs opacity-60">@${a.nombre.toLowerCase()}</p></div></div>`).join('')}</div><div class="mt-6 p-4 bg-dorado/20 rounded-xl"><p class="text-sm font-medium">📢 Comunicados del curso</p><p class="text-xs opacity-70 mt-1">Acá van exámenes comunes, cambios de horario y eventos compartidos (sin mostrar notas privadas de nadie).</p></div></div>`}
+
+function renderRanking(){let rank=load('imc_ranking',{});let mes=new Date().toISOString().slice(0,7);let data=rank[mes]||{};let users=load('imc_users',[]).filter(u=>u.curso==currentUser.curso);let sorted=users.map(u=>({u,xp:data[u.id]||0})).sort((a,b)=>b.xp-a.xp);return `<div class="card p-6"><h3 class="font-serif text-xl">🏆 Ranking - ${mes}</h3><p class="text-xs opacity-60 mb-4">XP por completar tareas, objetivos y rachas. Se reinicia cada mes.</p><div class="space-y-2">${sorted.map((r,i)=>`<div class="flex items-center gap-3 p-3 rounded-xl ${i==0?'bg-dorado/30':i<3?'bg-crema':'bg-crema/50'}"><span class="text-lg">${i==0?'🥇':i==1?'🥈':i==2?'🥉':i+1}</span><div class="flex-1"><p class="text-sm font-medium">${r.u.ranking?r.u.nombreRanking||r.u.nombre:'Anónimo'}</p><p class="text-xs opacity-60">${r.u.curso}</p></div><span class="font-serif font-bold">${r.xp} XP</span></div>`).join('')}</div><div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3"><div class="p-3 bg-crema rounded-xl text-center"><p class="text-xl">🏅</p><p class="text-xs mt-1">10 tareas</p></div><div class="p-3 bg-crema rounded-xl text-center"><p class="text-xl">🔥</p><p class="text-xs mt-1">7 días racha</p></div><div class="p-3 bg-crema rounded-xl text-center"><p class="text-xl">🎯</p><p class="text-xs mt-1">5 objetivos</p></div><div class="p-3 bg-crema rounded-xl text-center"><p class="text-xl">📚</p><p class="text-xs mt-1">10 estudios</p></div></div></div>`}
+
+function renderObjetivos(){let o=load('imc_objetivos',[]).filter(x=>x.userId==currentUser.id);return `<div class="flex justify-between mb-4"><h3 class="font-medium">Mis objetivos</h3><button onclick="openModal('objetivo')" class="bg-marron text-white px-4 py-2 rounded-full text-sm">+ Objetivo</button></div><div class="grid md:grid-cols-2 gap-3">${o.map(obj=>`<div class="card p-5"><p class="text-sm font-medium">${obj.titulo}</p><div class="mt-3 h-2 bg-crema rounded-full"><div class="h-2 bg-dorado rounded-full" style="width:${obj.prog}%"></div></div><div class="flex justify-between mt-2"><span class="text-xs opacity-60">${obj.prog}%</span><button onclick="updateObj(${obj.id})" class="text-xs text-marron">+10%</button></div></div>`).join('')||'<p class="text-sm opacity-60">Sin objetivos. Ej: Llegar preparado al examen de Matemática</p>'}</div>`}
+
+function renderPerdido(){return `<div class="max-w-2xl"><div class="card p-8 text-center"><p class="text-5xl mb-4">🤯</p><h3 class="font-serif text-2xl">Estoy perdido</h3><p class="text-sm opacity-70 mt-2">Acá va a estar tu asistente con IA. Por ahora analizamos tus datos para preparar la conexión.</p><div class="mt-6 grid grid-cols-2 gap-3 text-left"><div class="bg-crema p-3 rounded-xl"><p class="text-xs opacity-60">TAREAS PENDIENTES</p><p class="font-bold">${tareasUser().filter(t=>t.estado!='completada').length}</p></div><div class="bg-crema p-3 rounded-xl"><p class="text-xs opacity-60">PRÓXIMOS EXÁMENES</p><p class="font-bold">${load('imc_eventos',[]).filter(e=>e.userId==currentUser.id).length}</p></div></div><div class="mt-6 p-4 bg-marron text-white rounded-xl text-left"><p class="text-xs opacity-70">ARQUITECTURA LISTA PARA IA</p><p class="text-sm mt-1 font-mono">POST /api/plan-estudio { tareas, examenes, materias, tiempo, objetivos }</p><p class="text-xs opacity-60 mt-2">Cuando quieras la conectamos a OpenAI / Muse API. Ya dejo el payload armado.</p></div><button class="mt-6 bg-dorado text-marron px-6 py-3 rounded-full font-medium">Generar plan (próximamente)</button></div></div>`}
+
+function openModal(type, pre=''){
+ let b=$('#modalBody'); $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex');
+ if(type=='tarea') b.innerHTML=`<h3 class="font-serif text-xl mb-4">Nueva tarea</h3><form id="fTarea" class="space-y-3"><input name="titulo" required placeholder="Título" class="w-full px-4 py-3 rounded-xl border"><select name="materia" class="w-full px-4 py-3 rounded-xl border"><option>${getMaterias().map(m=>`<option>${m.nombre}</option>`).join('')}</option></select><textarea name="desc" placeholder="Descripción" class="w-full px-4 py-3 rounded-xl border"></textarea><div class="grid grid-cols-2 gap-3"><input name="fecha" type="date" required class="px-4 py-3 rounded-xl border"><select name="prioridad" class="px-4 py-3 rounded-xl border"><option value="normal">🟢 Normal</option><option value="importante">🟠 Importante</option><option value="urgente">🔴 Urgente</option></select></div><button class="w-full bg-marron text-white py-3 rounded-xl">Guardar</button></form>`;
+ if(type=='nota') b.innerHTML=`<h3 class="font-serif text-xl mb-4">Nueva nota</h3><form id="fNota" class="space-y-3"><select name="materia" class="w-full px-4 py-3 rounded-xl border">${getMaterias().map(m=>`<option ${m.nombre==pre?'selected':''}>${m.nombre}</option>`).join('')}</select><div class="grid grid-cols-2 gap-3"><select name="tipo" class="px-4 py-3 rounded-xl border"><option>TP</option><option>Evaluación</option><option>Trabajo</option><option>Examen</option></select><input name="nota" type="number" min="1" max="10" step="0.1" required placeholder="Nota" class="px-4 py-3 rounded-xl border"></div><input name="fecha" type="date" required class="w-full px-4 py-3 rounded-xl border"><input name="desc" placeholder="Descripción opcional" class="w-full px-4 py-3 rounded-xl border"><button class="w-full bg-marron text-white py-3 rounded-xl">Guardar</button></form>`;
+ if(type=='evento') b.innerHTML=`<h3 class="font-serif text-xl mb-4">Nuevo evento</h3><form id="fEvento" class="space-y-3"><input name="titulo" required placeholder="Título" class="w-full px-4 py-3 rounded-xl border"><div class="grid grid-cols-2 gap-3"><input name="fecha" type="date" required class="px-4 py-3 rounded-xl border"><select name="tipo" class="px-4 py-3 rounded-xl border"><option value="examen">Examen</option><option value="entrega">Entrega</option><option value="evento">Evento</option><option value="feriado">Feriado</option><option value="acto">Acto</option></select></div><button class="w-full bg-marron text-white py-3 rounded-xl">Guardar</button></form>`;
+ if(type=='horario') b.innerHTML=`<h3 class="font-serif text-xl mb-4">Nuevo horario</h3><form id="fHorario" class="space-y-3"><select name="dia" class="w-full px-4 py-3 rounded-xl border"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option></select><select name="materia" class="w-full px-4 py-3 rounded-xl border">${getMaterias().map(m=>`<option>${m.nombre}</option>`).join('')}</select><input name="hora" placeholder="08:00 - 09:20" required class="w-full px-4 py-3 rounded-xl border"><button class="w-full bg-marron text-white py-3 rounded-xl">Guardar</button></form>`;
+ if(type=='objetivo') b.innerHTML=`<h3 class="font-serif text-xl mb-4">Nuevo objetivo</h3><form id="fObj" class="space-y-3"><input name="titulo" required placeholder="Ej: Entregar todo esta semana" class="w-full px-4 py-3 rounded-xl border"><button class="w-full bg-marron text-white py-3 rounded-xl">Crear</button></form>`;
+ setTimeout(()=>{
+  $('#fTarea')&&( $('#fTarea').onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target);let all=load('imc_tareas',[]);all.push({id:Date.now(),userId:currentUser.id,titulo:fd.get('titulo'),materia:fd.get('materia'),desc:fd.get('desc'),fecha:fd.get('fecha'),prioridad:fd.get('prioridad'),estado:'pendiente'});save('imc_tareas',all);closeModal();router('tareas')});
+  $('#fNota')&&( $('#fNota').onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target);let all=load('imc_notas',[]);all.push({id:Date.now(),userId:currentUser.id,materia:fd.get('materia'),tipo:fd.get('tipo'),nota:fd.get('nota'),fecha:fd.get('fecha'),desc:fd.get('desc')});save('imc_notas',all);addXP(5,'nota');closeModal();router('notas')});
+  $('#fEvento')&&( $('#fEvento').onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target);let all=load('imc_eventos',[]);all.push({id:Date.now(),userId:currentUser.id,titulo:fd.get('titulo'),fecha:fd.get('fecha'),tipo:fd.get('tipo')});save('imc_eventos',all);closeModal();router('calendario')});
+  $('#fHorario')&&( $('#fHorario').onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target);let all=load('imc_horarios',[]);all.push({id:Date.now(),userId:currentUser.id,dia:fd.get('dia'),materia:fd.get('materia'),hora:fd.get('hora')});save('imc_horarios',all);closeModal();router('horarios')});
+  $('#fObj')&&( $('#fObj').onsubmit=e=>{e.preventDefault();let fd=new FormData(e.target);let all=load('imc_objetivos',[]);all.push({id:Date.now(),userId:currentUser.id,titulo:fd.get('titulo'),prog:0});save('imc_objetivos',all);closeModal();router('objetivos')});
+ },100);
+}
+function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').classList.remove('flex')}
+$('#modal').onclick=e=>{if(e.target.id=='modal')closeModal()}
+function addXP(n,reason){let rank=load('imc_ranking',{});let mes=new Date().toISOString().slice(0,7);if(!rank[mes])rank[mes]={};rank[mes][currentUser.id]=(rank[mes][currentUser.id]||0)+n;save('imc_ranking',rank)}
+function updateObj(id){let all=load('imc_objetivos',[]);let o=all.find(x=>x.id==id);if(o){o.prog=Math.min(100,o.prog+10);if(o.prog==100)addXP(20,'objetivo');save('imc_objetivos',all);router('objetivos')}}
+
+init();
+</script>
+</body>
+</html>
